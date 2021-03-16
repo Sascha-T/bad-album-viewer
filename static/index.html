@@ -1,0 +1,362 @@
+<html>
+<head>
+    <title>Sascha's Garbage Album Thing&#8482;</title>
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        body {
+            overflow: hidden;
+        }
+
+        #album {
+            overflow-y: scroll;
+
+            position: fixed;
+            background-color: #323232;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            align-items: flex-start;
+            align-content: flex-start;
+        }
+
+        .invisible {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .element {
+            margin-left: 5px;
+            margin-top: 5px;
+            background-color: #000;
+            object-fit: cover;
+            width: 100px;
+            height: 100px;
+        }
+
+        #thumb2 {
+            width: 512px;
+            height: 512px;
+        }
+
+        #overlay {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: center;
+            align-items: center;
+            align-content: stretch;
+
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            background-color: #000000;
+            top: 0;
+            left: 0;
+            z-index: 999;
+        }
+
+        #content {
+            object-fit: contain;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: center;
+            align-items: center;
+            align-content: stretch;
+            height: 100%;
+            width: 100%;
+        }
+
+        #content-inside {
+            position: fixed;
+            height: 80%;
+            width: 100%;
+            object-fit: contain;
+        }
+
+        .nav {
+            position: fixed;
+            height: 50%;
+            width: 40px;
+            transition: 50ms;
+            background-color: #323232;
+        }
+
+        .nav:hover {
+            background-color: #525252;
+        }
+
+        #next {
+            position: fixed;
+            right: 0;
+        }
+
+        #back {
+            position: fixed;
+            left: 0;
+        }
+
+        #exit {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            background-color: #aa0000;
+            font-size: 40px;
+            line-height: 40px;
+            color: #fff;
+            transition: 100ms;
+        }
+
+        #thumbbar {
+            position: fixed;
+            bottom: 0;
+            height: 5%;
+            -background-color: #ff0000;
+            width: 50%;
+
+        }
+
+        #exit:hover {
+            background-color: #ff0000;
+        }
+    </style>
+    <script
+            src="https://code.jquery.com/jquery-3.6.0.js"
+            integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
+            crossorigin="anonymous"></script>
+    <script>
+
+        function indexOf(a, b) {
+            let i = 0;
+            for (let c in a) {
+                let d = a[c];
+                if(d == b)
+                    return i;
+                i++;
+            }
+            return -1;
+        }
+
+        window.onload = () => {
+            let thumb1 = $("#thumb1");
+            let thumb2 = $("#thumb2");
+
+            window.elements = {};
+            window.indexes = {};
+
+            let overlay_on = false;
+            let root = $("#album");
+            let overlay = $("#overlay");
+            let content = $("#content");
+
+            $(document).keyup(function (e) {
+                if (e.keyCode === 27) {
+                    if (overlay_on) {
+                        toggleOverlay();
+                    }
+                } else if(e.keyCode == 37)
+                    back()
+                else if(e.keyCode == 39)
+                    next()
+            });
+
+            $("#exit").click(() => {
+                toggleOverlay();
+            });
+
+            let next = () => {
+                let cur = window.current;
+                toggleOverlay();
+                toggleOverlay(window.indexes[cur + 1]);
+            };
+            let back = () => {
+                let cur = window.current;
+                if(window.current - 1 < 0)
+                    return;
+                toggleOverlay();
+                toggleOverlay(window.indexes[cur - 1]);
+            };
+
+            $("#next").click(next);
+            $("#back").click(back);
+
+            window.current = -1;
+
+            window.toggleOverlay = (code) => {
+                console.log(code);
+                if (overlay_on) {
+                    overlay.addClass("invisible");
+                    root.removeClass("invisible");
+                    window.current = -1;
+                    content.empty();
+                } else {
+                    if (!code)
+                        return
+                    window.current = indexOf(window.indexes, code);
+
+                    root.addClass("invisible");
+                    overlay.removeClass("invisible");
+
+
+                    let element;
+                    let data = window.elements[code];
+                    content.empty();
+                    if (data.type == "video") {
+                        element = $(`<video controls id="content-inside" src="/file/${data.code}"></video>`)
+                    } else {
+                        element = $(`<img id="content-inside" src="/file/${data.code}"></img>`)
+                    }
+
+                    content.append(element);
+                }
+                overlay_on = !overlay_on;
+            };
+
+            let img = new Image();
+
+            async function thumbnail() {
+                let wait = () => {
+                    return new Promise((res, rej) => {
+                        setTimeout(rej, 1000);
+                    })
+                }
+                let video = thumb1[0];
+                let videoprom = new Promise((res, rej) => {
+                    video.load();
+                    let done = () => {
+                        res();
+                        video.removeEventListener("loadeddata", done);
+                    };
+                    video.addEventListener("loadeddata", done);
+                })
+                let ret = await Promise.race([videoprom, wait()]);
+                let thumb = thumb2[0];
+                let ctx = thumb.getContext("2d");
+                let blob = new Promise((res, rej) => {
+                    ctx.drawImage(video, 0, 0, thumb.width, thumb.height);
+                    ctx.drawImage(img, 0, 0, thumb.width, thumb.height);
+                    thumb.toBlob((blob) => {
+                        res(URL.createObjectURL(blob));
+                    });
+                });
+                return await Promise.race([blob, wait()]);
+            }
+
+            window.thumbnail = thumbnail;
+
+            window.preview = async (code) => {
+                let file = window.elements[code];
+                try {
+                    thumb1.attr("src", "/file/" + file.code);
+                    let thumb = await thumbnail();
+                    let element = $(`<img class="element" id="${file.code}" data-id="${i}" src="${thumb}"></img>`);
+                    root.append(element);
+                    file.thumb = thumb;
+
+                    element.click(() => {
+                        toggleOverlay(file.code);
+                    });
+                    return element;
+                } catch (e) {
+                    console.log(e);
+                    delete window.elements[file.code];
+                }
+            }
+
+            async function populate() {
+                elements = {};
+                indexes = {};
+
+                img = new Image();
+                img.src = "/video.png";
+                await new Promise((res, rej) => {
+                    img.onload = res;
+                })
+
+                root.empty();
+                let files = await (await fetch("/files")).json();
+
+                window.i = 0;
+                for (let file of files) {
+                    window.elements[file.code] = file;
+                    window.indexes[i] = file.code;
+                    i++;
+                    if (file.type == "video") {
+                        /*thumb1.attr("src", "/file/" + file.code);
+                        try {
+                            let thumb = await thumbnail();
+                            let element = $(`<img class="element" id="${file.code}" data-id="${i}" src="${thumb}"></img>`);
+                            root.append(element);
+                            file.thumb = thumb;
+
+                            element.click(() => {
+                                toggleOverlay(file.code);
+                            });
+                        } catch (e) {
+                            delete window.elements[file.code];
+                        }*/
+
+                        try {
+                            let ret = await preview(file.code);
+                            if(ret != undefined) {
+                                root.append(ret);
+                            } else {
+                                delete window.elements[file.code];
+                            }
+                        } catch(e) {
+
+                        }
+                    } else {
+                        let element = $(`<img class="element" id="${file.code}" data-id="${i}" src="/file/${file.code}"></img>`);
+                        root.append(element);
+                        element.click(() => {
+                            toggleOverlay(file.code);
+                        });
+                    }
+                }
+
+            }
+
+            function removeItemAll(arr, value) {
+                let i = 0;
+                while (i < arr.length) {
+                    if (arr[i] === value) {
+                        arr.splice(i, 1);
+                    } else {
+                        ++i;
+                    }
+                }
+                return arr;
+            }
+
+            populate();
+        }
+    </script>
+</head>
+<body>
+<video id="thumb1" class="invisible"></video>
+<canvas id="thumb2" class="invisible"></canvas>
+<div id="album"></div>
+<div id="overlay" class="invisible">
+    <div id="content">
+
+    </div>
+    <div id="thumbbar">
+
+    </div>
+    <div id="exit">X</div>
+    <div class="nav" id="next"></div>
+    <div class="nav" id="back"></div>
+</div>
+</body>
+</html>
