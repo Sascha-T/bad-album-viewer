@@ -19,6 +19,7 @@ let association = {};
 program.version('0.0.1');
 program
     .option('-x', 'eXtended (use GLOB)')
+    .option('-s', 'shuffle')
 program.parse(process.argv);
 const options = program.opts();
 app.use(express.static(path.join(path.dirname(require.main.filename), "static")));
@@ -46,10 +47,21 @@ async function globA(globI, opt) {
     })
 }
 
+function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+
 app.get('/files', async (req, res) => {
     let files = fs.readdirSync(".");
     if(options.x)
         files = await globA("**/*", {})
+    if(options.s)
+        shuffle(files)
     let ret = [];
     for (const file of files) {
         let ext = path.extname(file.toLowerCase());

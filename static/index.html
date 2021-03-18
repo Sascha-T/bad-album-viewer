@@ -77,6 +77,7 @@
 
         #content-inside {
             position: fixed;
+            top: 10%;
             height: 80%;
             width: 100%;
             object-fit: contain;
@@ -117,19 +118,25 @@
             transition: 100ms;
         }
 
-        #thumbbar {
+        #bar {
+            display: block;
             position: fixed;
-            bottom: 0;
+            top: 0;
             height: 5%;
-            -background-color: #ff0000;
+            background-color: #ff0000;
             width: 50%;
+        }
+        #title {
 
+            font-family: 'Roboto', sans-serif;
         }
 
         #exit:hover {
             background-color: #ff0000;
         }
     </style>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <script
             src="https://code.jquery.com/jquery-3.6.0.js"
             integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
@@ -158,6 +165,7 @@
             let root = $("#album");
             let overlay = $("#overlay");
             let content = $("#content");
+            let title = $("#title");
 
             $(document).keyup(function (e) {
                 if (e.keyCode === 27) {
@@ -193,11 +201,11 @@
             window.current = -1;
 
             window.toggleOverlay = (code) => {
-                console.log(code);
                 if (overlay_on) {
                     overlay.addClass("invisible");
                     root.removeClass("invisible");
                     window.current = -1;
+                    title[0].innerText = "TITLE";
                     content.empty();
                 } else {
                     if (!code)
@@ -210,6 +218,7 @@
 
                     let element;
                     let data = window.elements[code];
+                    title[0].innerText = data.name;
                     content.empty();
                     if (data.type == "video") {
                         element = $(`<video controls id="content-inside" src="/file/${data.code}"></video>`)
@@ -351,8 +360,8 @@
     <div id="content">
 
     </div>
-    <div id="thumbbar">
-
+    <div id="bar">
+        <p id="title">TITLE</p>
     </div>
     <div id="exit">X</div>
     <div class="nav" id="next"></div>
